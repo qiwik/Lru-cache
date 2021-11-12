@@ -7,7 +7,7 @@ type LRUCache interface {
 func (c *Cache) Add(key string, value interface{}) bool {
 	c.Lock()
 	defer c.Unlock()
-	if ok := c.validateItem(key); !ok {
+	if ok := c.validateItem(key); ok {
 		return false
 	}
 
