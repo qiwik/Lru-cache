@@ -1,7 +1,9 @@
 package models
 
 type LRUCache interface {
-
+	Add(key string, value interface{}) bool
+	Remove(key string) bool
+	Get(key string) (value interface{}, ok bool)
 }
 
 func (c *Cache) Add(key string, value interface{}) bool {
