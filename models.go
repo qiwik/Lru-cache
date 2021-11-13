@@ -5,6 +5,7 @@ import (
 	"sync"
 )
 
+// Item is an element inside *list.Element of Cache
 type Item struct {
 	Key	string
 	Value	interface{}
@@ -18,6 +19,7 @@ type Cache struct {
 	Chain	*list.List
 }
 
+// NewLRUCache create new implementation of Cache
 func NewLRUCache(n int) *Cache {
 	return &Cache{
 		Capacity: n,
@@ -26,6 +28,7 @@ func NewLRUCache(n int) *Cache {
 	}
 }
 
+// Add returns false if current key already exists, and true if key doesn't exist and new item was added to cache
 func (c *Cache) Add(key string, value interface{}) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -53,6 +56,7 @@ func (c *Cache) removeLast() {
 	delete(c.Items, item.Key)
 }
 
+// Remove returns false if current key doesn't exist, and true if removing was successful
 func (c *Cache) Remove(key string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -74,6 +78,7 @@ func (c *Cache) validateItem(key string) (*list.Element, bool) {
 	}
 }
 
+// Get func returns a value with true if such element exist with current key, else returns nil and false
 func (c *Cache) Get(key string) (value interface{}, ok bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
