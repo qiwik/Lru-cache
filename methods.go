@@ -1,4 +1,4 @@
-package Lru_cache
+package lru_cache
 
 type LRUCache interface {
 	Add(key string, value interface{}) bool

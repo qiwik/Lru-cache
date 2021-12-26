@@ -1,4 +1,4 @@
-package Lru_cache
+package lru_cache
 
 import (
 	"github.com/stretchr/testify/require"

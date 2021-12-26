@@ -1,4 +1,4 @@
-package Lru_cache
+package lru_cache
 
 import (
 	"container/list"
@@ -7,16 +7,16 @@ import (
 
 // Item is an element inside *list.Element of Cache
 type Item struct {
-	Key	string
-	Value	interface{}
+	Key   string
+	Value interface{}
 }
 
 type Cache struct {
 	mu sync.Mutex
 
 	Capacity int
-	Items	map[string]*list.Element
-	Chain	*list.List
+	Items    map[string]*list.Element
+	Chain    *list.List
 }
 
 // NewLRUCache create new implementation of Cache
@@ -42,7 +42,7 @@ func (c *Cache) Add(key string, value interface{}) bool {
 	}
 
 	newItem := &Item{
-		Key: key,
+		Key:   key,
 		Value: value,
 	}
 	newElement := c.Chain.PushFront(newItem)
