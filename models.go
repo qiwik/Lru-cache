@@ -14,12 +14,6 @@ type Cache struct {
 	chain    *list.List
 }
 
-// item is an element inside *list.Element of Cache
-type item struct {
-	key   string
-	value interface{}
-}
-
 // NewCache create new implementation of lru Cache
 func NewCache(n int) (*Cache, error) {
 	if n <= 0 {
@@ -30,4 +24,10 @@ func NewCache(n int) (*Cache, error) {
 		items:    make(map[string]*list.Element, n),
 		chain:    list.New(),
 	}, nil
+}
+
+// item is an element inside *list.Element of Cache
+type item struct {
+	key   string
+	value interface{}
 }

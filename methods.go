@@ -1,6 +1,9 @@
 package golru
 
-import "container/list"
+import (
+	"container/list"
+	"reflect"
+)
 
 func (c *Cache) Len() int {
 	return c.chain.Len()
@@ -38,6 +41,37 @@ func (c *Cache) ChangeValue(key string, newValue interface{}) bool {
 	element.Value.(*item).value = newValue
 	c.chain.MoveToFront(element)
 	return true
+}
+
+func (c *Cache) Keys() []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	keys := make([]string, 0, len(c.items))
+	for key := range c.items {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+func (c *Cache) ReflectKeys() []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	keysValues := reflect.ValueOf(c.items).MapKeys()
+	keys := make([]string, 0, len(c.items))
+	for i := range keysValues {
+		keys = append(keys, keysValues[i].String())
+	}
+	return keys
+}
+
+func (c *Cache) Values() []interface{} {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	values := make([]interface{}, 0, len(c.items))
+	for _, value := range c.items {
+		values = append(values, value)
+	}
+	return values
 }
 
 // Add returns false if current key already exists, and true if key doesn't exist and new item was added to cache

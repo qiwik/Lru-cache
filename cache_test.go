@@ -194,3 +194,62 @@ func TestChangeCapacityToZero(t *testing.T) {
 	newCache.ChangeCapacity(0)
 	require.Equal(t, 1, newCache.Len())
 }
+
+func TestValues(t *testing.T) {
+	newCache, err := NewCache(4)
+	require.NoError(t, err)
+	newCache.Add("test1", 42)
+	newCache.Add("test2", 43)
+	newCache.Add("test3", 44)
+	newCache.Add("test4", 45)
+	values := newCache.Values()
+	require.Len(t, values, 4)
+}
+
+func TestReflectKeys(t *testing.T) {
+	newCache, err := NewCache(4)
+	require.NoError(t, err)
+	newCache.Add("test1", 42)
+	newCache.Add("test2", 43)
+	newCache.Add("test3", 44)
+	newCache.Add("test4", 45)
+	keys := newCache.ReflectKeys()
+	require.Len(t, keys, 4)
+	require.IsType(t, "string", keys[0])
+}
+
+func TestKeys(t *testing.T) {
+	newCache, err := NewCache(4)
+	require.NoError(t, err)
+	newCache.Add("test1", 42)
+	newCache.Add("test2", 43)
+	newCache.Add("test3", 44)
+	newCache.Add("test4", 45)
+	keys := newCache.Keys()
+	require.Len(t, keys, 4)
+	require.IsType(t, "string", keys[0])
+}
+
+// Benchmarks
+
+func BenchmarkReflectKeys(b *testing.B) {
+	newCache, _ := NewCache(4)
+	newCache.Add("test1", 42)
+	newCache.Add("test2", 43)
+	newCache.Add("test3", 44)
+	newCache.Add("test4", 45)
+	for i := 0; i < b.N; i++ {
+		newCache.ReflectKeys()
+	}
+}
+
+func BenchmarkKeys(b *testing.B) {
+	newCache, _ := NewCache(4)
+	newCache.Add("test1", 42)
+	newCache.Add("test2", 43)
+	newCache.Add("test3", 44)
+	newCache.Add("test4", 45)
+	for i := 0; i < b.N; i++ {
+		newCache.Keys()
+	}
+}
