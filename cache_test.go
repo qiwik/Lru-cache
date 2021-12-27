@@ -1,4 +1,4 @@
-package lru_cache
+package golru
 
 import (
 	"github.com/stretchr/testify/require"
@@ -6,14 +6,22 @@ import (
 )
 
 func TestInit(t *testing.T) {
-	newCache := NewCache(2)
+	newCache, err := NewCache(2)
+	require.NoError(t, err)
 	require.Equal(t, 2, newCache.capacity)
 	require.Equal(t, 0, newCache.chain.Len())
 	require.Equal(t, 0, len(newCache.items))
 }
 
+func TestInitSuccess(t *testing.T) {
+	cache, err := NewCache(0)
+	require.Error(t, err)
+	require.Nil(t, cache)
+}
+
 func TestAddPositive(t *testing.T) {
-	newCache := NewCache(2)
+	newCache, err := NewCache(2)
+	require.NoError(t, err)
 
 	answer := newCache.Add("test", 45)
 	require.True(t, answer)
@@ -30,7 +38,8 @@ func TestAddPositive(t *testing.T) {
 }
 
 func TestAddNegative(t *testing.T) {
-	newCache := NewCache(2)
+	newCache, err := NewCache(2)
+	require.NoError(t, err)
 
 	answer := newCache.Add("test", 45)
 	require.True(t, answer)
@@ -41,7 +50,8 @@ func TestAddNegative(t *testing.T) {
 }
 
 func TestAddRemoveLast(t *testing.T) {
-	newCache := NewCache(2)
+	newCache, err := NewCache(2)
+	require.NoError(t, err)
 
 	answer1 := newCache.Add("test", 45)
 	require.True(t, answer1)
@@ -59,7 +69,8 @@ func TestAddRemoveLast(t *testing.T) {
 }
 
 func TestGetPositive(t *testing.T) {
-	newCache := NewCache(3)
+	newCache, err := NewCache(3)
+	require.NoError(t, err)
 
 	answer1 := newCache.Add("test", 45)
 	require.True(t, answer1)
@@ -79,7 +90,8 @@ func TestGetPositive(t *testing.T) {
 }
 
 func TestGetNegative(t *testing.T) {
-	newCache := NewCache(1)
+	newCache, err := NewCache(1)
+	require.NoError(t, err)
 
 	answer := newCache.Add("test", 45)
 	require.True(t, answer)
@@ -90,7 +102,8 @@ func TestGetNegative(t *testing.T) {
 }
 
 func TestRemovePositive(t *testing.T) {
-	newCache := NewCache(1)
+	newCache, err := NewCache(1)
+	require.NoError(t, err)
 
 	answer := newCache.Add("test", 45)
 	require.True(t, answer)
@@ -104,7 +117,8 @@ func TestRemovePositive(t *testing.T) {
 }
 
 func TestRemoveNegative(t *testing.T) {
-	newCache := NewCache(1)
+	newCache, err := NewCache(1)
+	require.NoError(t, err)
 
 	answer := newCache.Add("test", 45)
 	require.True(t, answer)
@@ -118,7 +132,8 @@ func TestRemoveNegative(t *testing.T) {
 }
 
 func TestSetValueSuccess(t *testing.T) {
-	newCache := NewCache(3)
+	newCache, err := NewCache(3)
+	require.NoError(t, err)
 	newCache.Add("test", 101)
 	newCache.Add("tests", 102)
 	newCache.Add("testing", 103)
@@ -135,14 +150,16 @@ func TestSetValueSuccess(t *testing.T) {
 }
 
 func TestSetValueInvalidKey(t *testing.T) {
-	newCache := NewCache(1)
+	newCache, err := NewCache(1)
+	require.NoError(t, err)
 	newCache.Add("test", 101)
 	answer := newCache.ChangeValue("attempt", "pool")
 	require.False(t, answer)
 }
 
 func TestRemoveAll(t *testing.T) {
-	newCache := NewCache(3)
+	newCache, err := NewCache(3)
+	require.NoError(t, err)
 	newCache.Add("test", 101)
 	newCache.Add("tests", 102)
 	newCache.Add("testing", 103)
@@ -151,7 +168,8 @@ func TestRemoveAll(t *testing.T) {
 }
 
 func TestChangeCapacityToLarge(t *testing.T) {
-	newCache := NewCache(1)
+	newCache, err := NewCache(1)
+	require.NoError(t, err)
 	newCache.Add("test", 42)
 	newCache.ChangeCapacity(2)
 	newCache.Add("new", "testing")
@@ -159,7 +177,8 @@ func TestChangeCapacityToLarge(t *testing.T) {
 }
 
 func TestChangeCapacityToLess(t *testing.T) {
-	newCache := NewCache(4)
+	newCache, err := NewCache(4)
+	require.NoError(t, err)
 	newCache.Add("test1", 42)
 	newCache.Add("test2", 43)
 	newCache.Add("test3", 44)
@@ -168,8 +187,9 @@ func TestChangeCapacityToLess(t *testing.T) {
 	require.Equal(t, 2, newCache.Len())
 }
 
-func TestChangeCapacityToNull(t *testing.T) {
-	newCache := NewCache(1)
+func TestChangeCapacityToZero(t *testing.T) {
+	newCache, err := NewCache(1)
+	require.NoError(t, err)
 	newCache.Add("test", 42)
 	newCache.ChangeCapacity(0)
 	require.Equal(t, 1, newCache.Len())
