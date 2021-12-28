@@ -1,7 +1,10 @@
 package golru
 
 import (
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/stretchr/testify/require"
+	"log"
+	"strconv"
 	"testing"
 )
 
@@ -233,23 +236,159 @@ func TestKeys(t *testing.T) {
 // Benchmarks
 
 func BenchmarkReflectKeys(b *testing.B) {
-	newCache, _ := NewCache(4)
-	newCache.Add("test1", 42)
-	newCache.Add("test2", 43)
-	newCache.Add("test3", 44)
-	newCache.Add("test4", 45)
+	newCache, _ := NewCache(50)
+	for i := 0; i < 50; i++ {
+		newCache.Add("test"+strconv.Itoa(i), 42)
+	}
 	for i := 0; i < b.N; i++ {
 		newCache.ReflectKeys()
 	}
 }
 
 func BenchmarkKeys(b *testing.B) {
-	newCache, _ := NewCache(4)
-	newCache.Add("test1", 42)
-	newCache.Add("test2", 43)
-	newCache.Add("test3", 44)
-	newCache.Add("test4", 45)
+	newCache, _ := NewCache(50)
+	for i := 0; i < 50; i++ {
+		newCache.Add("test"+strconv.Itoa(i), 42)
+	}
 	for i := 0; i < b.N; i++ {
 		newCache.Keys()
+	}
+}
+
+func BenchmarkGolangLruKeys(b *testing.B) {
+	cache, _ := lru.New(50)
+	for i := 0; i < 50; i++ {
+		cache.Add("test"+strconv.Itoa(i), 42)
+	}
+	for i := 0; i < b.N; i++ {
+		cache.Keys()
+	}
+}
+
+func BenchmarkGolangLruGet(b *testing.B) {
+	cache, err := lru.New(100)
+	if err != nil {
+		log.Fatal("error")
+	}
+	cache.Add("key", struct {
+		Slice     []string
+		Integer   int
+		NewStruct struct {
+			Flo float64
+		}
+	}{
+		Slice:     []string{"test", "testing", "golang"},
+		Integer:   123456789987654321,
+		NewStruct: struct{ Flo float64 }{Flo: 456215.12165468},
+	})
+	for i := 0; i < b.N; i++ {
+		cache.Get("key")
+	}
+}
+
+func BenchmarkGet(b *testing.B) {
+	cache, err := NewCache(100)
+	if err != nil {
+		log.Fatal("error")
+	}
+	cache.Add("key", struct {
+		Slice     []string
+		Integer   int
+		NewStruct struct {
+			Flo float64
+		}
+	}{
+		Slice:     []string{"test", "testing", "golang"},
+		Integer:   123456789987654321,
+		NewStruct: struct{ Flo float64 }{Flo: 456215.12165468},
+	})
+	for i := 0; i < b.N; i++ {
+		cache.Get("key")
+	}
+}
+
+func BenchmarkGolangLruAdd(b *testing.B) {
+	cache, err := lru.New(100)
+	if err != nil {
+		log.Fatal("error")
+	}
+	for i := 0; i < b.N; i++ {
+		cache.Add("key", struct {
+			Slice     []string
+			Integer   int
+			NewStruct struct {
+				Flo float64
+			}
+		}{
+			Slice:     []string{"test", "testing", "golang"},
+			Integer:   123456789987654321,
+			NewStruct: struct{ Flo float64 }{Flo: 456215.12165468},
+		})
+	}
+}
+
+func BenchmarkAdd(b *testing.B) {
+	cache, err := NewCache(100)
+	if err != nil {
+		log.Fatal("error")
+	}
+	for i := 0; i < b.N; i++ {
+		cache.Add("key", struct {
+			Slice     []string
+			Integer   int
+			NewStruct struct {
+				Flo float64
+			}
+		}{
+			Slice:     []string{"test", "testing", "golang"},
+			Integer:   123456789987654321,
+			NewStruct: struct{ Flo float64 }{Flo: 456215.12165468},
+		})
+	}
+}
+
+func BenchmarkGolangLruRemove(b *testing.B) {
+	cache, err := lru.New(100)
+	if err != nil {
+		log.Fatal("error")
+	}
+	for i := 0; i < 100; i++ {
+		cache.Add("key"+strconv.Itoa(i), struct {
+			Slice     []string
+			Integer   int
+			NewStruct struct {
+				Flo float64
+			}
+		}{
+			Slice:     []string{"test", "testing", "golang"},
+			Integer:   123456789987654321,
+			NewStruct: struct{ Flo float64 }{Flo: 456215.12165468},
+		})
+	}
+	for i := 0; i < b.N; i++ {
+		cache.Remove("key")
+	}
+}
+
+func BenchmarkRemove(b *testing.B) {
+	cache, err := NewCache(100)
+	if err != nil {
+		log.Fatal("error")
+	}
+	for i := 0; i < 100; i++ {
+		cache.Add("key"+strconv.Itoa(i), struct {
+			Slice     []string
+			Integer   int
+			NewStruct struct {
+				Flo float64
+			}
+		}{
+			Slice:     []string{"test", "testing", "golang"},
+			Integer:   123456789987654321,
+			NewStruct: struct{ Flo float64 }{Flo: 456215.12165468},
+		})
+	}
+	for i := 0; i < b.N; i++ {
+		cache.Remove("key")
 	}
 }
