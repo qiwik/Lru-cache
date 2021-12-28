@@ -38,7 +38,7 @@ if !ok {
 
 ## Comparison
 
-According to benchmarks, the glory library is about 1.8-2 times faster than the existing library 
+According to benchmarks, the golru library is about 1.8-2 times faster than the existing library 
 https://github.com/hashicorp/golang-lru
 ````
 goos: linux
