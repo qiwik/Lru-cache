@@ -72,14 +72,6 @@ func (c *Cache) ChangeValue(key string, newValue interface{}) bool {
 	return true
 }
 
-// validate checks the existence of an element by the key, and if it does not exist, returns false, instead of an element
-func (c *Cache) validate(key string) (element *list.Element, ok bool) {
-	if element, ok = c.items[key]; !ok {
-		return nil, false
-	}
-	return element, true
-}
-
 // Clear completely clears the cache
 func (c *Cache) Clear() {
 	for c.chain.Len() > 0 {
@@ -108,13 +100,6 @@ func (c *Cache) ChangeCapacity(newCap int) {
 			c.removeLast()
 		}
 	}
-}
-
-// removeLast deletes the last element in the list
-func (c *Cache) removeLast() {
-	currentElement := c.chain.Back()
-	last := c.chain.Remove(currentElement).(*item)
-	delete(c.items, last.key)
 }
 
 // Keys returns a slice of the keys that exist in the cache by simply traversing all the keys. Works faster than
@@ -151,4 +136,19 @@ func (c *Cache) Values() []interface{} {
 		values = append(values, value)
 	}
 	return values
+}
+
+// validate checks the existence of an element by the key, and if it does not exist, returns false, instead of an element
+func (c *Cache) validate(key string) (element *list.Element, ok bool) {
+	if element, ok = c.items[key]; !ok {
+		return nil, false
+	}
+	return element, true
+}
+
+// removeLast deletes the last element in the list
+func (c *Cache) removeLast() {
+	currentElement := c.chain.Back()
+	last := c.chain.Remove(currentElement).(*item)
+	delete(c.items, last.key)
 }
