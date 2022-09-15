@@ -16,15 +16,15 @@ import (
 type Cache struct {
 	mu sync.Mutex
 
-	capacity int
+	capacity uint32
 	items    map[string]*list.Element
 	chain    *list.List
 }
 
 // NewCache create new implementation of lru Cache. Capacity can't be less than one. If you set capacity to zero,
 // for example, an assignment error will return
-func NewCache(n int) (*Cache, error) {
-	if n <= 0 {
+func NewCache(n uint32) (*Cache, error) {
+	if n == 0 {
 		return nil, errors.New("capacity of the cache can not be less than 1")
 	}
 	return &Cache{
@@ -34,7 +34,7 @@ func NewCache(n int) (*Cache, error) {
 	}, nil
 }
 
-// item is an element inside *list.Element of Cache with the key and value used by the your program
+// item is an element inside *list.Element of Cache with the key and value used by your program
 type item struct {
 	key   string
 	value interface{}

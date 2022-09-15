@@ -15,7 +15,7 @@ func (c *Cache) Add(key string, value interface{}) bool {
 		return false
 	}
 
-	if c.chain.Len() == c.capacity {
+	if c.chain.Len() == int(c.capacity) {
 		c.removeLast()
 	}
 
@@ -87,7 +87,7 @@ func (c *Cache) Len() int {
 // ChangeCapacity allows you to dynamically change the cache capacity. The new value must not be less than one. If
 // the new capacity is less than the previous one, then the last elements in the list are deleted up to the desired
 // parameter value
-func (c *Cache) ChangeCapacity(newCap int) {
+func (c *Cache) ChangeCapacity(newCap uint32) {
 	switch {
 	case newCap <= 0:
 		return
@@ -96,7 +96,7 @@ func (c *Cache) ChangeCapacity(newCap int) {
 		return
 	default:
 		c.capacity = newCap
-		for c.Len() > newCap {
+		for c.Len() > int(newCap) {
 			c.removeLast()
 		}
 	}
