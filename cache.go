@@ -8,6 +8,11 @@ import (
 )
 
 type seconds float64
+type CacheOption func(*Cache)
+
+var (
+	ErrCacheCapacity = errors.New("capacity of the cache can not be less than 1")
+)
 
 // Cache is a structure describing a temporary data store by key through a linked list. Mutex is present inside to
 // implement the ability to work with the cache competitively.
@@ -27,18 +32,22 @@ type Cache struct {
 
 // NewCache create new implementation of lru Cache. Capacity can't be less than one. If you set capacity to zero,
 // for example, an assignment error will return
-func NewCache(n uint32, ttl seconds) (*Cache, error) {
-	// todo: ttl необязательный
+func NewCache(n uint32, opts ...CacheOption) (*Cache, error) {
 	if n == 0 {
-		return nil, errors.New("capacity of the cache can not be less than 1")
+		return nil, ErrCacheCapacity
 	}
 
-	return &Cache{
+	c := &Cache{
 		capacity: n,
 		items:    make(map[string]*list.Element, n),
 		chain:    list.New(),
-		ttl:      ttl,
-	}, nil
+	}
+
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	return c, nil
 }
 
 // item is an element inside *list.Element of Cache with the key and value used by your program
@@ -47,4 +56,10 @@ type item struct {
 	value interface{}
 
 	creationTime time.Time
+}
+
+func WithTTL(ttl seconds) CacheOption {
+	return func(cache *Cache) {
+		cache.ttl = ttl
+	}
 }

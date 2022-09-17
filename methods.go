@@ -2,6 +2,7 @@ package golru
 
 import (
 	"container/list"
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -10,7 +11,12 @@ import (
 )
 
 const (
-	nano = 1000000000
+	fromSecond      = 1000000000
+	fromMillisecond = 1000000
+)
+
+var (
+	ErrZeroTTL = errors.New("ttl should be greater than 0")
 )
 
 // todo: interface?
@@ -86,7 +92,6 @@ func (c *Cache) ChangeValue(key string, newValue interface{}) bool {
 		return false
 	}
 
-	// TODO: sec строго положительное число
 	element.Value.(*item).value = newValue
 	element.Value.(*item).creationTime = time.Now()
 	c.chain.MoveToFront(element)
@@ -103,9 +108,6 @@ func (c *Cache) Clear() {
 
 // Len allows you to find out the fullness of the cache
 func (c *Cache) Len() int {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	return c.chain.Len()
 }
 
@@ -173,26 +175,34 @@ func (c *Cache) Values() []interface{} {
 }
 
 // TODO: завершение по контексту, ticker.Stop
-func (c *Cache) Watch() {
+
+// Expire starts checking the cache for the existence of expired data. Returns error if ttl is zero
+func (c *Cache) Expire() error {
+	if c.ttl == 0 {
+		return ErrZeroTTL
+	}
+
 	ticker := time.NewTicker(toNanosecond(float64(c.ttl)) * time.Nanosecond)
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
-				c.watch()
+				c.inspect()
 			}
 		}
 	}()
+
+	return nil
 }
 
 // TODO: реализовать обход кэша и переименовать функцию
-func (c *Cache) watch() {
+// inspect crawls the linked list and deletes data whose lifetime has come to an end
+func (c *Cache) inspect() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	current := c.chain.Front()
 
-	// todo: возможна гонка
 	for current != nil {
 		val := current.Value.(*item)
 		if time.Now().Sub(val.creationTime).Seconds() > float64(c.ttl) {
@@ -224,16 +234,21 @@ func (c *Cache) removeLast() {
 	delete(c.items, last.key)
 }
 
+// toNanosecond is a converter for ttl to time.Duration
 func toNanosecond(ttl float64) time.Duration {
 	ttlStr := fmt.Sprint(ttl)
 	splitted := strings.Split(ttlStr, ".")
 
 	f, _ := strconv.ParseInt(splitted[0], 10, 64)
 
-	for len(splitted[1]) < 4 {
-		splitted[1] += "0"
-	}
-	s, _ := strconv.ParseInt(splitted[1][:3], 10, 64)
+	if len(splitted) != 1 {
+		for len(splitted[1]) < 3 {
+			splitted[1] += "0"
+		}
+		s, _ := strconv.ParseInt(splitted[1][:3], 10, 64)
 
-	return time.Duration(f*nano + s*1000000)
+		return time.Duration(f*fromSecond + s*fromMillisecond)
+	}
+
+	return time.Duration(f * fromSecond)
 }
