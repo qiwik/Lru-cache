@@ -1,236 +1,327 @@
 package golru
 
 import (
-	lru "github.com/hashicorp/golang-lru"
-	"github.com/stretchr/testify/require"
+	"context"
 	"log"
 	"strconv"
 	"testing"
+	"time"
+
+	lru "github.com/hashicorp/golang-lru"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInit(t *testing.T) {
-	newCache, err := NewCache(2)
+	c, err := NewCache(2)
 	require.NoError(t, err)
-	require.Equal(t, 2, newCache.capacity)
-	require.Equal(t, 0, newCache.chain.Len())
-	require.Equal(t, 0, len(newCache.items))
+
+	tc := c.(*cache)
+	require.Equal(t, uint32(2), tc.capacity)
+	require.Equal(t, 0, tc.chain.Len())
+	require.Equal(t, 0, len(tc.items))
 }
 
 func TestInitSuccess(t *testing.T) {
-	cache, err := NewCache(0)
+	c, err := NewCache(0)
 	require.Error(t, err)
-	require.Nil(t, cache)
+	require.Nil(t, c)
 }
 
 func TestAddPositive(t *testing.T) {
-	newCache, err := NewCache(2)
+	c, err := NewCache(2)
 	require.NoError(t, err)
 
-	answer := newCache.Add("test", 45)
-	require.True(t, answer)
-	require.Equal(t, 1, newCache.chain.Len())
-	require.Equal(t, 1, len(newCache.items))
-	elem := newCache.chain.Front()
-	require.Equal(t, 45, elem.Value.(*item).value)
-	require.Equal(t, elem, newCache.items["test"])
+	tc := c.(*cache)
 
-	fail := newCache.Add("test", "sos")
+	answer := c.Add("test", 45)
+	require.True(t, answer)
+	require.Equal(t, 1, tc.chain.Len())
+	require.Equal(t, 1, len(tc.items))
+
+	elem := tc.chain.Front()
+	require.Equal(t, 45, elem.Value.(*item).value)
+	require.Equal(t, elem, tc.items["test"])
+
+	fail := c.Add("test", "sos")
 	require.False(t, fail)
-	require.Equal(t, 1, newCache.chain.Len())
-	require.Equal(t, 1, len(newCache.items))
+	require.Equal(t, 1, tc.chain.Len())
+	require.Equal(t, 1, len(tc.items))
 }
 
 func TestAddNegative(t *testing.T) {
-	newCache, err := NewCache(2)
+	c, err := NewCache(2)
 	require.NoError(t, err)
 
-	answer := newCache.Add("test", 45)
+	tc := c.(*cache)
+
+	answer := c.Add("test", 45)
 	require.True(t, answer)
-	fail := newCache.Add("test", "sos")
+
+	fail := c.Add("test", "sos")
 	require.False(t, fail)
-	require.Equal(t, 1, newCache.chain.Len())
-	require.Equal(t, 1, len(newCache.items))
+	require.Equal(t, 1, tc.chain.Len())
+	require.Equal(t, 1, len(tc.items))
 }
 
 func TestAddRemoveLast(t *testing.T) {
-	newCache, err := NewCache(2)
+	c, err := NewCache(2)
 	require.NoError(t, err)
 
-	answer1 := newCache.Add("test", 45)
+	tc := c.(*cache)
+
+	answer1 := c.Add("test", 45)
 	require.True(t, answer1)
-	answer2 := newCache.Add("testing", "sos")
+	answer2 := c.Add("testing", "sos")
 	require.True(t, answer2)
-	answer3 := newCache.Add("new", 101)
+	answer3 := c.Add("new", 101)
 	require.True(t, answer3)
 
-	frontItem := newCache.chain.Front()
+	frontItem := tc.chain.Front()
 	require.Equal(t, 101, frontItem.Value.(*item).value)
-	require.Equal(t, frontItem, newCache.items["new"])
-	backItem := newCache.chain.Back()
+	require.Equal(t, frontItem, tc.items["new"])
+
+	backItem := tc.chain.Back()
 	require.Equal(t, "sos", backItem.Value.(*item).value)
-	require.Equal(t, backItem, newCache.items["testing"])
+	require.Equal(t, backItem, tc.items["testing"])
 }
 
 func TestGetPositive(t *testing.T) {
-	newCache, err := NewCache(3)
+	c, err := NewCache(3)
 	require.NoError(t, err)
 
-	answer1 := newCache.Add("test", 45)
-	require.True(t, answer1)
-	answer2 := newCache.Add("testing", "sos")
-	require.True(t, answer2)
-	answer3 := newCache.Add("new", 101)
-	require.True(t, answer3)
-	require.Equal(t, 3, newCache.chain.Len())
-	require.Equal(t, 3, len(newCache.items))
+	tc := c.(*cache)
 
-	value, ok := newCache.Get("testing")
+	answer1 := c.Add("test", 45)
+	require.True(t, answer1)
+	answer2 := c.Add("testing", "sos")
+	require.True(t, answer2)
+	answer3 := c.Add("new", 101)
+	require.True(t, answer3)
+	require.Equal(t, 3, tc.chain.Len())
+	require.Equal(t, 3, len(tc.items))
+
+	value, ok := c.Get("testing")
 	require.True(t, ok)
 	require.Equal(t, "sos", value)
 
-	frontItem := newCache.chain.Front()
+	frontItem := tc.chain.Front()
 	require.Equal(t, "sos", frontItem.Value.(*item).value)
 }
 
 func TestGetNegative(t *testing.T) {
-	newCache, err := NewCache(1)
+	c, err := NewCache(1)
 	require.NoError(t, err)
 
-	answer := newCache.Add("test", 45)
+	answer := c.Add("test", 45)
 	require.True(t, answer)
 
-	value, ok := newCache.Get("testing")
+	value, ok := c.Get("testing")
 	require.False(t, ok)
 	require.Nil(t, value)
 }
 
 func TestRemovePositive(t *testing.T) {
-	newCache, err := NewCache(1)
+	c, err := NewCache(1)
 	require.NoError(t, err)
 
-	answer := newCache.Add("test", 45)
-	require.True(t, answer)
-	require.Equal(t, 1, newCache.chain.Len())
-	require.Equal(t, 1, len(newCache.items))
+	tc := c.(*cache)
 
-	ok := newCache.Remove("test")
+	answer := c.Add("test", 45)
+	require.True(t, answer)
+	require.Equal(t, 1, tc.chain.Len())
+	require.Equal(t, 1, len(tc.items))
+
+	ok := c.Remove("test")
 	require.True(t, ok)
-	require.Equal(t, 0, newCache.chain.Len())
-	require.Equal(t, 0, len(newCache.items))
+	require.Equal(t, 0, tc.chain.Len())
+	require.Equal(t, 0, len(tc.items))
 }
 
 func TestRemoveNegative(t *testing.T) {
-	newCache, err := NewCache(1)
+	c, err := NewCache(1)
 	require.NoError(t, err)
 
-	answer := newCache.Add("test", 45)
-	require.True(t, answer)
-	require.Equal(t, 1, newCache.chain.Len())
-	require.Equal(t, 1, len(newCache.items))
+	tc := c.(*cache)
 
-	ok := newCache.Remove("tests")
+	answer := c.Add("test", 45)
+	require.True(t, answer)
+	require.Equal(t, 1, tc.chain.Len())
+	require.Equal(t, 1, len(tc.items))
+
+	ok := c.Remove("tests")
 	require.False(t, ok)
-	require.Equal(t, 1, newCache.chain.Len())
-	require.Equal(t, 1, len(newCache.items))
+	require.Equal(t, 1, tc.chain.Len())
+	require.Equal(t, 1, len(tc.items))
 }
 
 func TestSetValueSuccess(t *testing.T) {
-	newCache, err := NewCache(3)
+	c, err := NewCache(3)
 	require.NoError(t, err)
-	newCache.Add("test", 101)
-	newCache.Add("tests", 102)
-	newCache.Add("testing", 103)
-	answer := newCache.ChangeValue("test", 0)
-	require.True(t, answer)
-	require.Equal(t, 0, newCache.items["test"].Value.(*item).value)
-	require.Equal(t, 102, newCache.items["tests"].Value.(*item).value)
-	require.Equal(t, 103, newCache.items["testing"].Value.(*item).value)
 
-	frontItem := newCache.chain.Front()
+	tc := c.(*cache)
+
+	c.Add("test", 101)
+	c.Add("tests", 102)
+	c.Add("testing", 103)
+
+	answer := c.ChangeValue("test", 0)
+	require.True(t, answer)
+	require.Equal(t, 0, tc.items["test"].Value.(*item).value)
+	require.Equal(t, 102, tc.items["tests"].Value.(*item).value)
+	require.Equal(t, 103, tc.items["testing"].Value.(*item).value)
+
+	frontItem := tc.chain.Front()
 	require.Equal(t, 0, frontItem.Value.(*item).value)
-	backItem := newCache.chain.Back()
+	backItem := tc.chain.Back()
 	require.Equal(t, 102, backItem.Value.(*item).value)
 }
 
 func TestSetValueInvalidKey(t *testing.T) {
-	newCache, err := NewCache(1)
+	c, err := NewCache(1)
 	require.NoError(t, err)
-	newCache.Add("test", 101)
-	answer := newCache.ChangeValue("attempt", "pool")
+
+	c.Add("test", 101)
+	answer := c.ChangeValue("attempt", "pool")
 	require.False(t, answer)
 }
 
 func TestRemoveAll(t *testing.T) {
-	newCache, err := NewCache(3)
+	c, err := NewCache(3)
 	require.NoError(t, err)
-	newCache.Add("test", 101)
-	newCache.Add("tests", 102)
-	newCache.Add("testing", 103)
-	newCache.Clear()
-	require.Equal(t, 0, newCache.Len())
+
+	c.Add("test", 101)
+	c.Add("tests", 102)
+	c.Add("testing", 103)
+	c.Clear()
+	require.Equal(t, 0, c.Len())
 }
 
 func TestChangeCapacityToLarge(t *testing.T) {
-	newCache, err := NewCache(1)
+	c, err := NewCache(1)
 	require.NoError(t, err)
-	newCache.Add("test", 42)
-	newCache.ChangeCapacity(2)
-	newCache.Add("new", "testing")
-	require.Equal(t, 2, newCache.Len())
+
+	c.Add("test", 42)
+	c.ChangeCapacity(2)
+	c.Add("new", "testing")
+	require.Equal(t, 2, c.Len())
 }
 
 func TestChangeCapacityToLess(t *testing.T) {
-	newCache, err := NewCache(4)
+	c, err := NewCache(4)
 	require.NoError(t, err)
-	newCache.Add("test1", 42)
-	newCache.Add("test2", 43)
-	newCache.Add("test3", 44)
-	newCache.Add("test4", 45)
-	newCache.ChangeCapacity(2)
-	require.Equal(t, 2, newCache.Len())
+
+	c.Add("test1", 42)
+	c.Add("test2", 43)
+	c.Add("test3", 44)
+	c.Add("test4", 45)
+	c.ChangeCapacity(2)
+	require.Equal(t, 2, c.Len())
 }
 
 func TestChangeCapacityToZero(t *testing.T) {
-	newCache, err := NewCache(1)
+	c, err := NewCache(1)
 	require.NoError(t, err)
-	newCache.Add("test", 42)
-	newCache.ChangeCapacity(0)
-	require.Equal(t, 1, newCache.Len())
+
+	c.Add("test", 42)
+	c.ChangeCapacity(0)
+	require.Equal(t, 1, c.Len())
 }
 
 func TestValues(t *testing.T) {
-	newCache, err := NewCache(4)
+	c, err := NewCache(4)
 	require.NoError(t, err)
-	newCache.Add("test1", 42)
-	newCache.Add("test2", 43)
-	newCache.Add("test3", 44)
-	newCache.Add("test4", 45)
-	values := newCache.Values()
+
+	c.Add("test1", 42)
+	c.Add("test2", 43)
+	c.Add("test3", 44)
+	c.Add("test4", 45)
+
+	values := c.Values()
 	require.Len(t, values, 4)
 }
 
 func TestReflectKeys(t *testing.T) {
-	newCache, err := NewCache(4)
+	c, err := NewCache(4)
 	require.NoError(t, err)
-	newCache.Add("test1", 42)
-	newCache.Add("test2", 43)
-	newCache.Add("test3", 44)
-	newCache.Add("test4", 45)
-	keys := newCache.ReflectKeys()
+
+	c.Add("test1", 42)
+	c.Add("test2", 43)
+	c.Add("test3", 44)
+	c.Add("test4", 45)
+
+	keys := c.ReflectKeys()
 	require.Len(t, keys, 4)
 	require.IsType(t, "string", keys[0])
 }
 
 func TestKeys(t *testing.T) {
-	newCache, err := NewCache(4)
+	c, err := NewCache(4)
 	require.NoError(t, err)
-	newCache.Add("test1", 42)
-	newCache.Add("test2", 43)
-	newCache.Add("test3", 44)
-	newCache.Add("test4", 45)
-	keys := newCache.Keys()
+
+	c.Add("test1", 42)
+	c.Add("test2", 43)
+	c.Add("test3", 44)
+	c.Add("test4", 45)
+
+	keys := c.Keys()
 	require.Len(t, keys, 4)
 	require.IsType(t, "string", keys[0])
+}
+
+func TestExpireFractional(t *testing.T) {
+	c, err := NewCache(2, WithTTL(0.5))
+	require.NoError(t, err)
+
+	tc := c.(*cache)
+
+	c.Add("test ttl", "ttl")
+	require.Equal(t, tc.chain.Len(), 1)
+	require.Len(t, tc.items, 1)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err = c.Expire(ctx)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Second)
+	require.Equal(t, tc.chain.Len(), 0)
+	require.Len(t, tc.items, 0)
+}
+
+func TestExpireInteger(t *testing.T) {
+	c, err := NewCache(2, WithTTL(1))
+	require.NoError(t, err)
+
+	tc := c.(*cache)
+
+	c.Add("test ttl", "ttl")
+	c.Add("test ttl 2", "ttl")
+	require.Equal(t, tc.chain.Len(), 2)
+	require.Len(t, tc.items, 2)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err = c.Expire(ctx)
+	require.NoError(t, err)
+
+	time.Sleep(3 * time.Second)
+	require.Equal(t, tc.chain.Len(), 0)
+	require.Len(t, tc.items, 0)
+}
+
+func TestExpireZeroTTL(t *testing.T) {
+	c, err := NewCache(2)
+	require.NoError(t, err)
+
+	c.Add("test ttl", "ttl")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err = c.Expire(ctx)
+	require.ErrorIs(t, err, ErrZeroTTL)
 }
 
 // Benchmarks
