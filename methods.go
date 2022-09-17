@@ -175,8 +175,6 @@ func (c *cache) Values() []interface{} {
 	return values
 }
 
-// TODO: завершение по контексту, ticker.Stop
-
 // Expire starts checking the cache for the existence of expired data. Returns error if ttl is zero
 func (c *cache) Expire(ctx context.Context) error {
 	if c.ttl == 0 {
