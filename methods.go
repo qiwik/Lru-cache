@@ -192,6 +192,7 @@ func (c *cache) Expire(ctx context.Context) error {
 			case <-ticker.C:
 				c.inspect()
 			case <-ctx.Done():
+				ticker.Stop()
 				return
 			}
 		}
