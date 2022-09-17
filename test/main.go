@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/qiwik/golru"
 	"time"
+
+	"github.com/qiwik/golru"
 )
 
 func main() {

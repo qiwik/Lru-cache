@@ -183,6 +183,8 @@ func (c *Cache) Expire() error {
 		return ErrZeroTTL
 	}
 
+	c.inspect()
+
 	ticker := time.NewTicker(toNanosecond(float64(c.ttl)) * time.Nanosecond)
 	go func() {
 		for {
@@ -196,7 +198,6 @@ func (c *Cache) Expire() error {
 	return nil
 }
 
-// TODO: реализовать обход кэша и переименовать функцию
 // inspect crawls the linked list and deletes data whose lifetime has come to an end
 func (c *Cache) inspect() {
 	c.mu.Lock()

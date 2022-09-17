@@ -1,11 +1,13 @@
 package golru
 
 import (
-	lru "github.com/hashicorp/golang-lru"
-	"github.com/stretchr/testify/require"
 	"log"
 	"strconv"
 	"testing"
+	"time"
+
+	lru "github.com/hashicorp/golang-lru"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInit(t *testing.T) {
@@ -231,6 +233,48 @@ func TestKeys(t *testing.T) {
 	keys := newCache.Keys()
 	require.Len(t, keys, 4)
 	require.IsType(t, "string", keys[0])
+}
+
+func TestExpireFractional(t *testing.T) {
+	cache, err := NewCache(2, WithTTL(0.5))
+	require.NoError(t, err)
+
+	cache.Add("test ttl", "ttl")
+	require.Equal(t, cache.chain.Len(), 1)
+	require.Len(t, cache.items, 1)
+
+	err = cache.Expire()
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Second)
+	require.Equal(t, cache.chain.Len(), 0)
+	require.Len(t, cache.items, 0)
+}
+
+func TestExpireInteger(t *testing.T) {
+	cache, err := NewCache(2, WithTTL(1))
+	require.NoError(t, err)
+
+	cache.Add("test ttl", "ttl")
+	cache.Add("test ttl 2", "ttl")
+	require.Equal(t, cache.chain.Len(), 2)
+	require.Len(t, cache.items, 2)
+
+	err = cache.Expire()
+	require.NoError(t, err)
+
+	time.Sleep(3 * time.Second)
+	require.Equal(t, cache.chain.Len(), 0)
+	require.Len(t, cache.items, 0)
+}
+
+func TestExpireZeroTTL(t *testing.T) {
+	cache, err := NewCache(2)
+	require.NoError(t, err)
+
+	cache.Add("test ttl", "ttl")
+	err = cache.Expire()
+	require.ErrorIs(t, err, ErrZeroTTL)
 }
 
 // Benchmarks
