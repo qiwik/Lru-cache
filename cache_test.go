@@ -9,7 +9,7 @@ import (
 )
 
 func TestInit(t *testing.T) {
-	newCache, err := NewCache(2)
+	newCache, err := NewCache(2, 10)
 	require.NoError(t, err)
 	require.Equal(t, 2, newCache.capacity)
 	require.Equal(t, 0, newCache.chain.Len())
@@ -17,13 +17,13 @@ func TestInit(t *testing.T) {
 }
 
 func TestInitSuccess(t *testing.T) {
-	cache, err := NewCache(0)
+	cache, err := NewCache(0, 10)
 	require.Error(t, err)
 	require.Nil(t, cache)
 }
 
 func TestAddPositive(t *testing.T) {
-	newCache, err := NewCache(2)
+	newCache, err := NewCache(2, 10)
 	require.NoError(t, err)
 
 	answer := newCache.Add("test", 45)
@@ -41,7 +41,7 @@ func TestAddPositive(t *testing.T) {
 }
 
 func TestAddNegative(t *testing.T) {
-	newCache, err := NewCache(2)
+	newCache, err := NewCache(2, 10)
 	require.NoError(t, err)
 
 	answer := newCache.Add("test", 45)
@@ -53,7 +53,7 @@ func TestAddNegative(t *testing.T) {
 }
 
 func TestAddRemoveLast(t *testing.T) {
-	newCache, err := NewCache(2)
+	newCache, err := NewCache(2, 10)
 	require.NoError(t, err)
 
 	answer1 := newCache.Add("test", 45)
@@ -72,7 +72,7 @@ func TestAddRemoveLast(t *testing.T) {
 }
 
 func TestGetPositive(t *testing.T) {
-	newCache, err := NewCache(3)
+	newCache, err := NewCache(3, 10)
 	require.NoError(t, err)
 
 	answer1 := newCache.Add("test", 45)
@@ -93,7 +93,7 @@ func TestGetPositive(t *testing.T) {
 }
 
 func TestGetNegative(t *testing.T) {
-	newCache, err := NewCache(1)
+	newCache, err := NewCache(1, 10)
 	require.NoError(t, err)
 
 	answer := newCache.Add("test", 45)
@@ -105,7 +105,7 @@ func TestGetNegative(t *testing.T) {
 }
 
 func TestRemovePositive(t *testing.T) {
-	newCache, err := NewCache(1)
+	newCache, err := NewCache(1, 10)
 	require.NoError(t, err)
 
 	answer := newCache.Add("test", 45)
@@ -120,7 +120,7 @@ func TestRemovePositive(t *testing.T) {
 }
 
 func TestRemoveNegative(t *testing.T) {
-	newCache, err := NewCache(1)
+	newCache, err := NewCache(1, 10)
 	require.NoError(t, err)
 
 	answer := newCache.Add("test", 45)
@@ -135,7 +135,7 @@ func TestRemoveNegative(t *testing.T) {
 }
 
 func TestSetValueSuccess(t *testing.T) {
-	newCache, err := NewCache(3)
+	newCache, err := NewCache(3, 10)
 	require.NoError(t, err)
 	newCache.Add("test", 101)
 	newCache.Add("tests", 102)
@@ -153,7 +153,7 @@ func TestSetValueSuccess(t *testing.T) {
 }
 
 func TestSetValueInvalidKey(t *testing.T) {
-	newCache, err := NewCache(1)
+	newCache, err := NewCache(1, 10)
 	require.NoError(t, err)
 	newCache.Add("test", 101)
 	answer := newCache.ChangeValue("attempt", "pool")
@@ -161,7 +161,7 @@ func TestSetValueInvalidKey(t *testing.T) {
 }
 
 func TestRemoveAll(t *testing.T) {
-	newCache, err := NewCache(3)
+	newCache, err := NewCache(3, 10)
 	require.NoError(t, err)
 	newCache.Add("test", 101)
 	newCache.Add("tests", 102)
@@ -171,7 +171,7 @@ func TestRemoveAll(t *testing.T) {
 }
 
 func TestChangeCapacityToLarge(t *testing.T) {
-	newCache, err := NewCache(1)
+	newCache, err := NewCache(1, 10)
 	require.NoError(t, err)
 	newCache.Add("test", 42)
 	newCache.ChangeCapacity(2)
@@ -180,7 +180,7 @@ func TestChangeCapacityToLarge(t *testing.T) {
 }
 
 func TestChangeCapacityToLess(t *testing.T) {
-	newCache, err := NewCache(4)
+	newCache, err := NewCache(4, 10)
 	require.NoError(t, err)
 	newCache.Add("test1", 42)
 	newCache.Add("test2", 43)
@@ -191,7 +191,7 @@ func TestChangeCapacityToLess(t *testing.T) {
 }
 
 func TestChangeCapacityToZero(t *testing.T) {
-	newCache, err := NewCache(1)
+	newCache, err := NewCache(1, 10)
 	require.NoError(t, err)
 	newCache.Add("test", 42)
 	newCache.ChangeCapacity(0)
@@ -199,7 +199,7 @@ func TestChangeCapacityToZero(t *testing.T) {
 }
 
 func TestValues(t *testing.T) {
-	newCache, err := NewCache(4)
+	newCache, err := NewCache(4, 10)
 	require.NoError(t, err)
 	newCache.Add("test1", 42)
 	newCache.Add("test2", 43)
@@ -210,7 +210,7 @@ func TestValues(t *testing.T) {
 }
 
 func TestReflectKeys(t *testing.T) {
-	newCache, err := NewCache(4)
+	newCache, err := NewCache(4, 10)
 	require.NoError(t, err)
 	newCache.Add("test1", 42)
 	newCache.Add("test2", 43)
@@ -222,7 +222,7 @@ func TestReflectKeys(t *testing.T) {
 }
 
 func TestKeys(t *testing.T) {
-	newCache, err := NewCache(4)
+	newCache, err := NewCache(4, 10)
 	require.NoError(t, err)
 	newCache.Add("test1", 42)
 	newCache.Add("test2", 43)
@@ -236,7 +236,7 @@ func TestKeys(t *testing.T) {
 // Benchmarks
 
 func BenchmarkReflectKeys(b *testing.B) {
-	newCache, _ := NewCache(50)
+	newCache, _ := NewCache(50, 10)
 	for i := 0; i < 50; i++ {
 		newCache.Add("test"+strconv.Itoa(i), 42)
 	}
@@ -246,7 +246,7 @@ func BenchmarkReflectKeys(b *testing.B) {
 }
 
 func BenchmarkKeys(b *testing.B) {
-	newCache, _ := NewCache(50)
+	newCache, _ := NewCache(50, 10)
 	for i := 0; i < 50; i++ {
 		newCache.Add("test"+strconv.Itoa(i), 42)
 	}
@@ -287,7 +287,7 @@ func BenchmarkGolangLruGet(b *testing.B) {
 }
 
 func BenchmarkGet(b *testing.B) {
-	cache, err := NewCache(100)
+	cache, err := NewCache(100, 10)
 	if err != nil {
 		log.Fatal("error")
 	}
@@ -328,7 +328,7 @@ func BenchmarkGolangLruAdd(b *testing.B) {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	cache, err := NewCache(100)
+	cache, err := NewCache(100, 10)
 	if err != nil {
 		log.Fatal("error")
 	}
@@ -371,7 +371,7 @@ func BenchmarkGolangLruRemove(b *testing.B) {
 }
 
 func BenchmarkRemove(b *testing.B) {
-	cache, err := NewCache(100)
+	cache, err := NewCache(100, 10)
 	if err != nil {
 		log.Fatal("error")
 	}

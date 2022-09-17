@@ -2,8 +2,19 @@ package golru
 
 import (
 	"container/list"
+	"fmt"
 	"reflect"
+	"strconv"
+	"strings"
+	"time"
 )
+
+const (
+	nano = 1000000000
+)
+
+// todo: interface?
+// todo: переделать на свою очередь
 
 // Add returns false if current key already exists, and true if key doesn't exist and new item was added to cache.
 // When a new element is added, it is placed at the top of the list, and if capacity is reached, the last element,
@@ -11,6 +22,7 @@ import (
 func (c *Cache) Add(key string, value interface{}) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	if _, ok := c.validate(key); ok {
 		return false
 	}
@@ -20,11 +32,13 @@ func (c *Cache) Add(key string, value interface{}) bool {
 	}
 
 	newItem := &item{
-		key:   key,
-		value: value,
+		key:          key,
+		value:        value,
+		creationTime: time.Now(),
 	}
 	newElement := c.chain.PushFront(newItem)
 	c.items[newItem.key] = newElement
+
 	return true
 }
 
@@ -33,6 +47,7 @@ func (c *Cache) Add(key string, value interface{}) bool {
 func (c *Cache) Get(key string) (interface{}, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	element, ok := c.validate(key)
 	if !ok {
 		return nil, false
@@ -40,6 +55,7 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 
 	value := element.Value.(*item).value
 	c.chain.MoveToFront(element)
+
 	return value, true
 }
 
@@ -47,6 +63,7 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 func (c *Cache) Remove(key string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	element, ok := c.validate(key)
 	if !ok {
 		return false
@@ -54,6 +71,7 @@ func (c *Cache) Remove(key string) bool {
 
 	delete(c.items, key)
 	c.chain.Remove(element)
+
 	return true
 }
 
@@ -62,13 +80,17 @@ func (c *Cache) Remove(key string) bool {
 func (c *Cache) ChangeValue(key string, newValue interface{}) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	element, ok := c.validate(key)
 	if !ok {
 		return false
 	}
 
+	// TODO: sec строго положительное число
 	element.Value.(*item).value = newValue
+	element.Value.(*item).creationTime = time.Now()
 	c.chain.MoveToFront(element)
+
 	return true
 }
 
@@ -81,6 +103,9 @@ func (c *Cache) Clear() {
 
 // Len allows you to find out the fullness of the cache
 func (c *Cache) Len() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	return c.chain.Len()
 }
 
@@ -88,6 +113,9 @@ func (c *Cache) Len() int {
 // the new capacity is less than the previous one, then the last elements in the list are deleted up to the desired
 // parameter value
 func (c *Cache) ChangeCapacity(newCap uint32) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	switch {
 	case newCap <= 0:
 		return
@@ -107,10 +135,12 @@ func (c *Cache) ChangeCapacity(newCap uint32) {
 func (c *Cache) Keys() []string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	keys := make([]string, 0, len(c.items))
 	for key := range c.items {
 		keys = append(keys, key)
 	}
+
 	return keys
 }
 
@@ -119,11 +149,13 @@ func (c *Cache) Keys() []string {
 func (c *Cache) ReflectKeys() []string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	keysValues := reflect.ValueOf(c.items).MapKeys()
 	keys := make([]string, 0, len(c.items))
 	for i := range keysValues {
 		keys = append(keys, keysValues[i].String())
 	}
+
 	return keys
 }
 
@@ -131,11 +163,50 @@ func (c *Cache) ReflectKeys() []string {
 func (c *Cache) Values() []interface{} {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	values := make([]interface{}, 0, len(c.items))
 	for _, value := range c.items {
 		values = append(values, value)
 	}
+
 	return values
+}
+
+// TODO: завершение по контексту, ticker.Stop
+func (c *Cache) Watch() {
+	ticker := time.NewTicker(toNanosecond(float64(c.ttl)) * time.Nanosecond)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				c.watch()
+			}
+		}
+	}()
+}
+
+// TODO: реализовать обход кэша и переименовать функцию
+func (c *Cache) watch() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	current := c.chain.Front()
+
+	// todo: возможна гонка
+	for current != nil {
+		val := current.Value.(*item)
+		if time.Now().Sub(val.creationTime).Seconds() > float64(c.ttl) {
+			removed := current
+			current = current.Next()
+
+			delete(c.items, val.key)
+			c.chain.Remove(removed)
+
+			continue
+		}
+
+		current = current.Next()
+	}
 }
 
 // validate checks the existence of an element by the key, and if it does not exist, returns false, instead of an element
@@ -151,4 +222,18 @@ func (c *Cache) removeLast() {
 	currentElement := c.chain.Back()
 	last := c.chain.Remove(currentElement).(*item)
 	delete(c.items, last.key)
+}
+
+func toNanosecond(ttl float64) time.Duration {
+	ttlStr := fmt.Sprint(ttl)
+	splitted := strings.Split(ttlStr, ".")
+
+	f, _ := strconv.ParseInt(splitted[0], 10, 64)
+
+	for len(splitted[1]) < 4 {
+		splitted[1] += "0"
+	}
+	s, _ := strconv.ParseInt(splitted[1][:3], 10, 64)
+
+	return time.Duration(f*nano + s*1000000)
 }

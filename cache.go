@@ -4,7 +4,10 @@ import (
 	"container/list"
 	"errors"
 	"sync"
+	"time"
 )
+
+type seconds float64
 
 // Cache is a structure describing a temporary data store by key through a linked list. Mutex is present inside to
 // implement the ability to work with the cache competitively.
@@ -14,23 +17,27 @@ import (
 // All fields are non-exportable, which allows you to work with the content through methods without having
 // direct access to the cache
 type Cache struct {
-	mu sync.Mutex
+	mu    sync.Mutex
+	items map[string]*list.Element
+	chain *list.List
 
 	capacity uint32
-	items    map[string]*list.Element
-	chain    *list.List
+	ttl      seconds
 }
 
 // NewCache create new implementation of lru Cache. Capacity can't be less than one. If you set capacity to zero,
 // for example, an assignment error will return
-func NewCache(n uint32) (*Cache, error) {
+func NewCache(n uint32, ttl seconds) (*Cache, error) {
+	// todo: ttl необязательный
 	if n == 0 {
 		return nil, errors.New("capacity of the cache can not be less than 1")
 	}
+
 	return &Cache{
 		capacity: n,
 		items:    make(map[string]*list.Element, n),
 		chain:    list.New(),
+		ttl:      ttl,
 	}, nil
 }
 
@@ -38,4 +45,6 @@ func NewCache(n uint32) (*Cache, error) {
 type item struct {
 	key   string
 	value interface{}
+
+	creationTime time.Time
 }
