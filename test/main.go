@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -9,7 +10,10 @@ import (
 
 func main() {
 	c, _ := golru.NewCache(4, golru.WithTTL(0.8))
-	c.Expire()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	c.Expire(ctx)
 
 	c.Add("first", 1)
 	c.Add("second", 2)

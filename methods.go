@@ -2,6 +2,7 @@ package golru
 
 import (
 	"container/list"
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -19,13 +20,12 @@ var (
 	ErrZeroTTL = errors.New("ttl should be greater than 0")
 )
 
-// todo: interface?
 // todo: переделать на свою очередь
 
 // Add returns false if current key already exists, and true if key doesn't exist and new item was added to cache.
 // When a new element is added, it is placed at the top of the list, and if capacity is reached, the last element,
 // which is also the most unpopular in the cache, is deleted
-func (c *Cache) Add(key string, value interface{}) bool {
+func (c *cache) Add(key string, value interface{}) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -50,7 +50,7 @@ func (c *Cache) Add(key string, value interface{}) bool {
 
 // Get func returns a value with true if such element exist with current key, else returns nil and false. If an element
 // exists, it is moved to the top of the list in the cache
-func (c *Cache) Get(key string) (interface{}, bool) {
+func (c *cache) Get(key string) (interface{}, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -66,7 +66,7 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 }
 
 // Remove returns false if current key doesn't exist, and true if removing from cache was successful
-func (c *Cache) Remove(key string) bool {
+func (c *cache) Remove(key string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -83,7 +83,7 @@ func (c *Cache) Remove(key string) bool {
 
 // ChangeValue allows you to change the value of a key that already exists in the cache. If there is no such key in
 // the cache, the function returns false. If the value has changed, the element is sent to the top of the cache list
-func (c *Cache) ChangeValue(key string, newValue interface{}) bool {
+func (c *cache) ChangeValue(key string, newValue interface{}) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -101,21 +101,21 @@ func (c *Cache) ChangeValue(key string, newValue interface{}) bool {
 }
 
 // Clear completely clears the cache
-func (c *Cache) Clear() {
+func (c *cache) Clear() {
 	for c.chain.Len() > 0 {
 		c.removeLast()
 	}
 }
 
 // Len allows you to find out the fullness of the cache
-func (c *Cache) Len() int {
+func (c *cache) Len() int {
 	return c.chain.Len()
 }
 
 // ChangeCapacity allows you to dynamically change the cache capacity. The new value must not be less than one. If
 // the new capacity is less than the previous one, then the last elements in the list are deleted up to the desired
 // parameter value
-func (c *Cache) ChangeCapacity(newCap uint32) {
+func (c *cache) ChangeCapacity(newCap uint32) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -135,7 +135,7 @@ func (c *Cache) ChangeCapacity(newCap uint32) {
 
 // Keys returns a slice of the keys that exist in the cache by simply traversing all the keys. Works faster than
 // a function with reflection
-func (c *Cache) Keys() []string {
+func (c *cache) Keys() []string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -149,7 +149,7 @@ func (c *Cache) Keys() []string {
 
 // ReflectKeys returns a slice of keys existing in the cache using reflection. It works 3-4 times slower than the Keys
 // function, but is left for variability
-func (c *Cache) ReflectKeys() []string {
+func (c *cache) ReflectKeys() []string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -163,7 +163,7 @@ func (c *Cache) ReflectKeys() []string {
 }
 
 // Values returns a slice of all existing element values in the cache
-func (c *Cache) Values() []interface{} {
+func (c *cache) Values() []interface{} {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -178,7 +178,7 @@ func (c *Cache) Values() []interface{} {
 // TODO: завершение по контексту, ticker.Stop
 
 // Expire starts checking the cache for the existence of expired data. Returns error if ttl is zero
-func (c *Cache) Expire() error {
+func (c *cache) Expire(ctx context.Context) error {
 	if c.ttl == 0 {
 		return ErrZeroTTL
 	}
@@ -191,6 +191,8 @@ func (c *Cache) Expire() error {
 			select {
 			case <-ticker.C:
 				c.inspect()
+			case <-ctx.Done():
+				return
 			}
 		}
 	}()
@@ -199,7 +201,7 @@ func (c *Cache) Expire() error {
 }
 
 // inspect crawls the linked list and deletes data whose lifetime has come to an end
-func (c *Cache) inspect() {
+func (c *cache) inspect() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -222,7 +224,7 @@ func (c *Cache) inspect() {
 }
 
 // validate checks the existence of an element by the key, and if it does not exist, returns false, instead of an element
-func (c *Cache) validate(key string) (element *list.Element, ok bool) {
+func (c *cache) validate(key string) (element *list.Element, ok bool) {
 	if element, ok = c.items[key]; !ok {
 		return nil, false
 	}
@@ -230,7 +232,7 @@ func (c *Cache) validate(key string) (element *list.Element, ok bool) {
 }
 
 // removeLast deletes the last element in the list
-func (c *Cache) removeLast() {
+func (c *cache) removeLast() {
 	currentElement := c.chain.Back()
 	last := c.chain.Remove(currentElement).(*item)
 	delete(c.items, last.key)
