@@ -95,6 +95,7 @@ func (c *Cache) ChangeValue(key string, newValue interface{}) bool {
 	element.Value.(*item).value = newValue
 	element.Value.(*item).creationTime = time.Now()
 	c.chain.MoveToFront(element)
+	c.items[element.Value.(*item).key] = element
 
 	return true
 }
